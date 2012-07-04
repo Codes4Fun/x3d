@@ -1,0 +1,61 @@
+
+1) Resolve input issues (pointer events not working in some windows).
+
+Tests:
+gnome-terminal [highlight click] Menus (100%) Sub Menus (100%) Context Menus (?)
+google-chrome [highlight click] Menus (100%) Sub Menus (?) Webpages (0%) Flash (0%)
+VLC [highlight click] Menus Buttons
+
+Actions:
+(done) Implement pointer crossing events.
+Support pointer grabs.
+
+2) Resolve detached windows (submenus, tooltips, etc)
+
+Tests:
+gnome-terminal 80%
+google-chrome 0%
+VLC 50%
+
+Action:
+Per Application Panels
+
+3a) Stereoscopic support
+
+Actions:
+Add support for full screen.
+Support side by side 3D.
+Ability to add lenses to windows.
+
+3b) Share source
+
+Deadline: Sunday
+
+Actions:
+Clean up and modularize code better.
+Dynamically load Razer Hydra when available.
+Create final build system (cmake).
+Create final repository (google code, mercurial).
+
+3c) Add support for 2D input (mouse)
+
+Mouse input wrapped on a sphere (moves view at edges).
+Hot key to move camera independent.
+Head Tracking projection updating.
+
+3d) Add frames
+
+Action:
+Add visual frame. (need font support)
+finalize way to move windows.
+Add ability to resize window.
+
+3e) Optimizations
+
+Action:
+Add shader support. (GLee)
+
+3f) Properly destroy windows
+
+
+
