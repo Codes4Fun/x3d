@@ -469,6 +469,18 @@ void DrawGLScene()
 				}
 				else if (controls[1-controli][16] > 0.75f && controls[controli][16] < 0.25f )
 				{
+					if (nearest._w->w() != g_kb_focus)
+					{
+						g_kb_focus = nearest._w->w();
+						XSetInputFocus(g_dpy, g_kb_focus, RevertToParent, CurrentTime);
+					}
+					nearest._w->SendButtonEvent(g_root, nearest._x, nearest._y, Button3, g_button_state, true);
+					g_button_state |= Button3Mask;
+				}
+				else if (controls[controli][16] > 0.75f && controls[1-controli][16] < 0.25f )
+				{
+					nearest._w->SendButtonEvent(g_root, nearest._x, nearest._y, Button3, g_button_state, false);
+					g_button_state &= ~Button3Mask;
 				}
 				else if (controls[1-controli][14] > 0.75f && controls[controli][14] < 0.25f )
 				{
