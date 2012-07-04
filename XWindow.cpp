@@ -6,6 +6,7 @@
 #include "XWindow.h"
 #include <math.h>
 #include <string.h>
+#include <assert.h>
 
 
 class GrabServer
@@ -362,7 +363,7 @@ XWindow * XWindow::GetEventWindow(int event_mask, int &x, int &y)
 {
 	XWindow * child = NULL;
 	int cx, cy;
-	printf("GetEventWindow %08x %d %d\n", (int)_w, x, y); 
+	//printf("GetEventWindow %08x %d %d\n", (int)_w, x, y); 
 	for (XWindow * w = _children; w; w = w->_sibling)
 	{
 		if (!w->_mapped /*|| !(w->_event_mask & event_mask)*/)
@@ -374,11 +375,11 @@ XWindow * XWindow::GetEventWindow(int event_mask, int &x, int &y)
 		int wy = y - w->_y;
 		if (wx < 0 || wy < 0 || wx >= w->_width || wy >= w->_height)
 		{
-			printf("  child %08x FAIL %d %d %d %d\n", (int)w->_w, w->_x, w->_y, w->_width, w->_height); 
+			//printf("  child %08x FAIL %d %d %d %d\n", (int)w->_w, w->_x, w->_y, w->_width, w->_height); 
 			continue;
 		}
 
-		printf("  child %08x SUCCESS %d %d\n", (int)w->_w, wx, wy); 
+		//printf("  child %08x SUCCESS %d %d\n", (int)w->_w, wx, wy); 
 		child = w;
 		cx = wx;
 		cy = wy;
@@ -606,6 +607,27 @@ bool XWindow::RemoveWindow(Window w)
 {
 }
 
+void XWindow::GetCross(XWindow * a, XWindow * b, Cross &cross)
+{
+	if (!a || !b || a == b) return;
+
+	XWindow * c = a;
+	while (c != b && !b->IsParent(c))
+	{
+		cross.Add(c);
+		c = c->_parent;
+		assert(c);
+	}
+	cross.Add(c);
+	cross._base = cross._count - 1;
+	while (c != b)
+	{
+		cross.Add(b);
+		b = b->_parent;
+		assert(b);
+	}
+}
+
 void XWindow::Draw()
 {
 	float w = _width;
@@ -651,6 +673,43 @@ void XWindow::Draw()
 	glPopMatrix();
 }
 
+bool XWindow::IsParent(XWindow * w)
+{
+	for (XWindow * parent = _parent; parent; parent = parent->_parent)
+	{
+		if (w == parent)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+#define CROSS_BLOCKS(x) (((x) + 7) & ~7)
+XWindow::Cross::Cross()
+{
+	_count = 0;
+	_base = 0;
+	_w = NULL;
+}
+
+XWindow::Cross::~Cross()
+{
+	free(_w);
+}
+
+void XWindow::Cross::Add(XWindow * w)
+{
+	if ((_count & 7) == 0)
+	{
+		if (!_w)
+			_w = (XWindow**)malloc(sizeof(XWindow*) * CROSS_BLOCKS(_count + 1));
+		else
+			_w = (XWindow**)realloc(_w, sizeof(XWindow*) * CROSS_BLOCKS(_count + 1));
+	}
+	assert(w);
+	_w[_count++] = w;
+}
 
 void XWindow::SendMotionEvent(Window root, int x, int y, int state)
 {
@@ -679,7 +738,7 @@ void XWindow::SendMotionEvent(Window root, int x, int y, int state)
 	XFlush(_dpy);
 }
 
-void XWindow::SendCrossingEvent(Window root, int x, int y, int state, bool enter)
+void XWindow::SendCrossingEvent(Window root, int x, int y, int state, int detail, Window child, bool enter)
 {
 	int x_root = x + _x;
 	int y_root = y + _y;
@@ -693,16 +752,16 @@ void XWindow::SendCrossingEvent(Window root, int x, int y, int state, bool enter
 	event.xcrossing.display = _dpy;
 	event.xcrossing.window = _w;
 	event.xcrossing.root = root;
-	event.xcrossing.subwindow = None;
+	event.xcrossing.subwindow = child; // None
 	event.xcrossing.time = GetTime();//CurrentTime;
 	event.xcrossing.x = x;
 	event.xcrossing.y = y;
 	event.xcrossing.x_root = x_root;
 	event.xcrossing.y_root = y_root;
 	event.xcrossing.mode = NotifyNormal;
-	event.xcrossing.detail = enter? NotifyNonlinear : NotifyAncestor;
+	event.xcrossing.detail = detail;//enter? NotifyNonlinear : NotifyAncestor;
 	event.xcrossing.same_screen = True;
-	event.xcrossing.focus = enter? True : False;
+	event.xcrossing.focus = True;//enter? True : False;
 	event.xcrossing.state = state;
 	XSendEvent(_dpy, _w, True, enter? EnterWindowMask : LeaveWindowMask, &event);
 	XFlush(_dpy);

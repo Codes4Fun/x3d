@@ -26,6 +26,11 @@ Hydra * initHydra()
 	return hydra;
 }
 
+void exitHydra()
+{
+	sixenseExit();
+}
+
 int getHands(Hydra * hydra, Matrix &left, Matrix &right, float * controls)
 {
 	if (!hydra)

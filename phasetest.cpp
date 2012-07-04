@@ -364,6 +364,10 @@ void DrawGLScene()
 			nearest._distance = 100000.f;
 			nearest._w = NULL;
 			bool found = XWindow::GetNearest(nearest, 0);
+			if (nearest._w)
+			{
+				printf("nearest %08x\n", (int)nearest._w->w());
+			}
 
 #if 0
 			Matrix pixMat = right;
@@ -382,7 +386,13 @@ void DrawGLScene()
 				if (g_mouse_focus != None)
 				{
 					XWindow * w = XWindow::GetWindow(g_dpy, g_mouse_focus);
-					w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, false);
+					w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyAncestor, None, false);
+					XWindow * child = w;
+					for (w = w->parent(); w != xw; w = w->parent())
+					{
+						w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyVirtual, child->w(), false);
+						child = w;
+					}
 					g_mouse_focus = None;
 				}
 			}
@@ -393,10 +403,54 @@ void DrawGLScene()
 					if (g_mouse_focus != None)
 					{
 						XWindow * w = XWindow::GetWindow(g_dpy, g_mouse_focus);
-						w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, false);
+						XWindow::Cross cross;
+						XWindow::GetCross(w, nearest._w, cross);
+						if (cross._base == 0)
+						{
+							cross._w[0]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyInferior, None, false);
+							for (int i = cross._count - 1; i > 1; i--)
+							{
+								cross._w[i]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyVirtual, cross._w[i - 1]->w(), false);
+							}
+							cross._w[cross._base + 1]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyAncestor, None, true);
+						}
+						else if (cross._base == cross._count - 1)
+						{
+							cross._w[0]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyAncestor, None, false);
+							for (int i = 1; i < cross._base; i++)
+							{
+								cross._w[i]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyVirtual, cross._w[i - 1]->w(), true);
+							}
+							cross._w[cross._base]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyInferior, None, true);
+						}
+						else
+						{
+							cross._w[0]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyNonlinear, None, false);
+							for (int i = 1; i < cross._base; i++)
+							{
+								cross._w[i]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyNonlinearVirtual, cross._w[i - 1]->w(), false);
+							}
+							for (int i = cross._count - 1; i > cross._base + 1; i--)
+							{
+								cross._w[i]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyNonlinearVirtual, cross._w[i - 1]->w(), true);
+							}
+							cross._w[cross._base + 1]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyNonlinear, None, true);
+						}
+						g_mouse_focus = nearest._w->w();
 					}
-					g_mouse_focus = nearest._w->w();
-					nearest._w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, true);
+					else
+					{
+						g_mouse_focus = nearest._w->w();
+						XWindow * parent = nearest._frame;
+						while (parent != nearest._w)
+						{
+							XWindow * child = nearest._w;
+							for (; child->parent() != parent; child = child->parent());
+							parent->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyVirtual, child->w(), true);
+							parent = child;
+						}
+						nearest._w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyAncestor, None, true);
+					}
 				}
 				if (controls[1-controli][18] > 0.75f && controls[controli][18] < 0.25f )
 				{
@@ -484,6 +538,7 @@ void keyPressed(unsigned char key, int x, int y)
 {
 	if (key == ESCAPE) 
 	{
+		exitHydra();
 		exit(0);
 	}
 }
@@ -851,6 +906,7 @@ int main(int argc, char **argv)
 					w->SendKeyEvent(root, event.xkey.keycode, event.xkey.state, false);
 				}
 				break;
+#if 0
 			case MotionNotify:
 				{
 					Vector3 ray(event.xbutton.x * 2.f / g_width - 1.f, -(event.xbutton.y * 2.f - g_height) / g_width, -1.f);
@@ -924,6 +980,7 @@ int main(int argc, char **argv)
 					hit._w->SendButtonEvent(root, hit._x, -hit._y, event.xbutton.button, event.xbutton.state, false);
 				}
 				break;
+#endif
 			}
 		}
 		DrawGLScene();

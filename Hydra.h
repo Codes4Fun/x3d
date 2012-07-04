@@ -7,6 +7,7 @@
 class Hydra;
 
 Hydra * initHydra();
+void exitHydra();
 
 // left/right, up/down, trigger, bumper, start, stick, 1, 2, 3, 4
 

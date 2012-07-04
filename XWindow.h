@@ -79,6 +79,19 @@ public:
 		}
 	};
 
+	class Cross
+	{
+	public:
+		int _count;
+		int _base;
+		XWindow ** _w;
+
+		Cross();
+		~Cross();
+
+		void Add(XWindow * w);
+	};
+
 	XWindow(Display * dpy, Window w, XWindow * next = NULL);
 	~XWindow();
 
@@ -98,6 +111,7 @@ public:
 	static bool HitTest(Hit &hit, int event_mask); 
 	static XWindow * GetWindow(Display * dpy, Window w);
 	static bool RemoveWindow(Window w);
+	static void GetCross(XWindow * a, XWindow * b, Cross & cross);
 
 	Window w() { return _w; }
 	int width() { return _width; }
@@ -108,12 +122,15 @@ public:
 	int x() { return _x; }
 	int y() { return _y; }
 
+	XWindow * parent() { return _parent; }
 	XWindow * sibling() { return _sibling; }
 	int nchildren() { return _nchildren; }
 	XWindow * children() { return _children; }
 
+	bool IsParent(XWindow * w);
+
 	void SendMotionEvent(Window root, int x, int y, int state);
-	void SendCrossingEvent(Window root, int x, int y, int state, bool enter);
+	void SendCrossingEvent(Window root, int x, int y, int state, int detail, Window child, bool enter);
 	void SendButtonEvent(Window root, int x, int y, int button, int state, bool press);
 	void SendKeyEvent(Window root, int key, int state, bool press);
 };
