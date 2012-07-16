@@ -2,6 +2,8 @@
 // use with: Xephyr :9 +bs -wm -screen 1280x720
 // then: phasetest -display :9
 
+#include <x3dConfig.h>
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
@@ -18,7 +20,9 @@
 
 #include <sys/time.h>
 
+#ifdef USE_HYDRA
 #include "Hydra.h"
+#endif
 #include "XWindow.h"
 
 #define ESCAPE 9
@@ -45,7 +49,9 @@ Window g_mouse_focus;
 Window g_kb_focus;
 int g_button_state = 0;
 
+#ifdef USE_HYDRA
 Hydra * g_hydra;
+#endif
 
 unsigned int GetTime()
 {
@@ -282,12 +288,11 @@ void DrawGLScene()
 	}
 #endif
 
+#ifdef USE_HYDRA
 	Matrix left, right;
 	static int controli = 0;
 	static float controls[2][20];
-#if 1
 	int hands = getHands(g_hydra, left, right, controls[controli]);
-#endif
 	controli = 1 - controli;
 	static bool active = false;
 	static bool tracking = false;
@@ -319,7 +324,8 @@ void DrawGLScene()
 			{
 				Matrix inv = left;
 				inv.FastInverse();
-				relativeMat = g_camera * inv;
+				//relativeMat = g_camera * inv;
+				relativeMat = inv * g_camera;
 				tracking = true;
 			}
 		}
@@ -331,12 +337,14 @@ void DrawGLScene()
 			}
 			else
 			{
-				g_camera = relativeMat * left;
+				//g_camera = relativeMat * left;
+				g_camera = left * relativeMat;
 				//printf("%f %f %f\n", g_camera.translation()._x, g_camera.translation()._y, g_camera.translation()._z);
 			}
 		}
-		//printf("hand %f %f %f, %f %f %f\n", left.translation()._x, left.translation()._y, left.translation()._z, left.back()._x, left.back()._y, left.back()._z);
+		printf("hand %f %f %f, %f %f %f\n", left.translation()._x, left.translation()._y, left.translation()._z, left.back()._x, left.back()._y, left.back()._z);
 	}
+#endif
 
 	Matrix inv = g_camera;
 	inv.FastInverse();
@@ -346,6 +354,7 @@ void DrawGLScene()
 
 	g_scale = g_ppi / 2.56f;//960.f;
 
+#ifdef USE_HYDRA
 	static Matrix grabMat;
 	static Matrix grabMat2;
 	static bool grabbing = false;
@@ -521,12 +530,13 @@ void DrawGLScene()
 		glPopMatrix();
 		//printf("hand %f %f %f\n", right.translation()._x, right.translation()._y, right.translation()._z);
 	}
+#endif
 
 	glScalef(1.f / g_scale, 1.f / g_scale, 1.f / g_scale);
 
 	xw->Draw();
 
-
+#ifdef USE_HYDRA
 	if (nearest._frame)
 	{
 		glPushMatrix();
@@ -536,6 +546,7 @@ void DrawGLScene()
 		DrawCursorShadow(nearest._distance / 64.f);
 		glPopMatrix();
 	}
+#endif
 
 	glPopMatrix();
 
@@ -546,11 +557,13 @@ void DrawGLScene()
 	frame++;
 }
 
-void keyPressed(unsigned char key, int x, int y) 
+void keyPressed(unsigned char key, int x, int y)
 {
-	if (key == ESCAPE) 
+	if (key == ESCAPE)
 	{
+#ifdef USE_HYDRA
 		exitHydra();
+#endif
 		exit(0);
 	}
 }
@@ -558,7 +571,6 @@ void keyPressed(unsigned char key, int x, int y)
 static void usage(char * program_name)
 {
 	fprintf (stderr, "usage: %s [-display host:dpy]", program_name);
-	exit(1);
 }
 
 
@@ -572,7 +584,7 @@ void DumpWindow(Display * dpy, Window w, int depth)
 	int i;
 	char *window_name;
 	XWindowAttributes attrib;
-	
+
 	if (!XFetchName(dpy, w, &window_name))
 	{
 		window_name = NULL;
@@ -632,15 +644,16 @@ Window createWindow(const char * name, int width, int height)
 	  exit(1);
    }
 
-   /* window attributes */
-   attr.background_pixel = 0;
-   attr.border_pixel = 0;
-   attr.colormap = XCreateColormap( g_gldpy, root, g_glvisinfo->visual, AllocNone);
-   attr.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask;
+	/* window attributes */
+	attr.background_pixel = 0;
+	attr.border_pixel = 0;
+	attr.colormap = XCreateColormap( g_gldpy, root, g_glvisinfo->visual, AllocNone);
+	attr.event_mask = StructureNotifyMask | ExposureMask | KeyPressMask;
 	attr.event_mask |= PointerMotionMask | ButtonPressMask | ButtonReleaseMask;
-   mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
+	attr.override_redirect = False;//True;
+	mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask | CWOverrideRedirect;
 
-   win = XCreateWindow( g_gldpy, root, 0, 0, width, height,
+	win = XCreateWindow( g_gldpy, root, 0, 0, width, height,
 				0, g_glvisinfo->depth, InputOutput,
 				g_glvisinfo->visual, mask, &attr );
 
@@ -693,12 +706,17 @@ int OnXErrorEvent(Display * dpy, XErrorEvent * error)
 }
 
 
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
 	int i;
 
+	printf("version %d.%d\n", x3d_VERSION_MAJOR, x3d_VERSION_MINOR);
+#ifdef USE_HYDRA
+	printf("  using hydra module\n");
+#endif
+
 	Display * dpy;
-	char * display_name = NULL;
+	const char * display_name = NULL;
 	for (i = 1; i < argc; i++)
 	{
 		char *arg = argv[i];
@@ -707,7 +725,8 @@ int main(int argc, char **argv)
 		{
 			if (++i >= argc)
 			{
-				usage (argv[0]);
+				usage(argv[0]);
+				exit(0);
 			}
 
 			display_name = argv[i];
@@ -718,6 +737,8 @@ int main(int argc, char **argv)
 	if (!display_name)
 	{
 		usage(argv[0]);
+		printf(" attempting default of :9\n");
+		display_name = ":9";
 	}
 
 	dpy = XOpenDisplay(display_name);
@@ -726,7 +747,8 @@ int main(int argc, char **argv)
 	{
 		fprintf (stderr, "%s:  unable to open display '%s'\n",
 					argv[0], XDisplayName (display_name));
-		usage (argv[0]);
+		usage(argv[0]);
+		exit(0);
 	}
 
 	int damageError, damageEvent;
@@ -743,7 +765,9 @@ int main(int argc, char **argv)
 		printf("Error: glXCreateContext failed\n");
 		exit(1);
 	}
-	XMapWindow(g_gldpy, g_glwin);
+	//XMapWindow(g_gldpy, g_glwin);
+	XMapRaised(g_gldpy, g_glwin);
+	//XGrabKeyboard(g_gldpy, g_glwin, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 	glXMakeCurrent(g_gldpy, g_glwin, g_glctx);
 
 	InitGL(640, 480);
@@ -789,7 +813,9 @@ int main(int argc, char **argv)
 		child->matrix().translation() -= Vector3(0.5f * child->width(), -0.5f * child->height(), 0);
 	}
 
+#ifdef USE_HYDRA
 	g_hydra = initHydra();
+#endif
 
 	while (1)
 	{
@@ -907,12 +933,14 @@ int main(int argc, char **argv)
 			case KeyPress:
 				printf("key %08x %d \n", (int)g_kb_focus, event.xkey.keycode);
 				keyPressed(event.xkey.keycode, 0, 0);
+				if (g_kb_focus != None)
 				{
 					XWindow * w = XWindow::GetWindow(dpy, g_kb_focus);
 					w->SendKeyEvent(root, event.xkey.keycode, event.xkey.state, true);
 				}
 				break;
 			case KeyRelease:
+				if (g_kb_focus != None)
 				{
 					XWindow * w = XWindow::GetWindow(dpy, g_kb_focus);
 					w->SendKeyEvent(root, event.xkey.keycode, event.xkey.state, false);

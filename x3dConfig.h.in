@@ -1,0 +1,6 @@
+#define x3d_VERSION_MAJOR @x3d_VERSION_MAJOR@
+#define x3d_VERSION_MINOR @x3d_VERSION_MINOR@
+
+#cmakedefine USE_HYDRA
+
+
