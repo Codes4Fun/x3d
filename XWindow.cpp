@@ -27,7 +27,7 @@ public:
 int GetTime();
 
 
-XWindow * XWindow::s_table[256];
+XWindow * XWindow::s_table[1024];
 
 XWindow::XWindow(Display * dpy, Window w, XWindow * next) : _matrix(Matrix::identity)
 {
@@ -400,7 +400,7 @@ bool XWindow::GetNearest(Nearest &nearest, int event_mask)
 		nearest._w = NULL;
 		nearest._distance = nearest._radius;
 	}
-	for (int i = 0; i < 256; i++)
+	for (int i = 0; i < 1024; i++)
 	{
 		XWindow * w = s_table[i];
 		for (; w; w = w->_next)
@@ -537,7 +537,7 @@ bool XWindow::GetNearest(Nearest &nearest, int event_mask)
 
 bool XWindow::HitTest(Hit &hit, int event_mask)
 {
-	for (int i = 0; i < 256; i++)
+	for (int i = 0; i < 1024; i++)
 	{
 		XWindow * w = s_table[i];
 		for (; w; w = w->_next)
@@ -583,7 +583,7 @@ bool XWindow::HitTest(Hit &hit, int event_mask)
 
 XWindow * XWindow::GetWindow(Display * dpy, Window w)
 {
-	int index = ((w & 0xf0000000) >> 28) | (w & 0xf);
+	int index = ((w & 0xf0000000) >> 26) | (w & 0x3f);
 	XWindow * xw = s_table[index];
 	while (xw && !(xw->_dpy == dpy && xw->_w == w))
 	{

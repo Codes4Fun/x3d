@@ -7,7 +7,7 @@
 class XWindow
 {
 protected:
-	static XWindow * s_table[256];
+	static XWindow * s_table[1024];
 
 	Display * _dpy;
 	Window _w;
