@@ -1,3 +1,3 @@
-export LD_LIBRARY_PATH=`pwd`/sixenseSDK_linux_OSX/lib/linux_x64/release/
-cgdb --args ./phasetest -display :9
+export LD_LIBRARY_PATH=`pwd`
+cgdb --args ./x3d -display :9
 
