@@ -24,6 +24,7 @@
 #include "Hydra.h"
 #endif
 #include "XWindow.h"
+#include "XDisplay.h"
 
 #define ESCAPE 9
 
@@ -358,7 +359,7 @@ void DrawGLScene()
 	static Matrix grabMat;
 	static Matrix grabMat2;
 	static bool grabbing = false;
-	static XWindow::Nearest nearest;
+	static XDisplay::Nearest nearest;
 	if (hands & 2)
 	{
 #if 0
@@ -372,7 +373,7 @@ void DrawGLScene()
 			nearest._radius = 64.f;
 			nearest._distance = 100000.f;
 			nearest._w = NULL;
-			bool found = XWindow::GetNearest(nearest, 0);
+			bool found = XDisplay::GetNearest(nearest, 0);
 			if (nearest._w)
 			{
 				printf("nearest %08x\n", (int)nearest._w->w());
@@ -394,7 +395,7 @@ void DrawGLScene()
 			{
 				if (g_mouse_focus != None)
 				{
-					XWindow * w = XWindow::GetWindow(g_dpy, g_mouse_focus);
+					XWindow * w = XDisplay::GetWindow(g_dpy, g_mouse_focus);
 					w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyAncestor, None, false);
 					XWindow * child = w;
 					for (w = w->parent(); w != xw; w = w->parent())
@@ -411,9 +412,9 @@ void DrawGLScene()
 				{
 					if (g_mouse_focus != None)
 					{
-						XWindow * w = XWindow::GetWindow(g_dpy, g_mouse_focus);
-						XWindow::Cross cross;
-						XWindow::GetCross(w, nearest._w, cross);
+						XWindow * w = XDisplay::GetWindow(g_dpy, g_mouse_focus);
+						XDisplay::Cross cross;
+						XDisplay::GetCross(w, nearest._w, cross);
 						if (cross._base == 0)
 						{
 							cross._w[0]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyInferior, None, false);
@@ -797,7 +798,7 @@ int main(int argc, char **argv)
 	g_kb_focus = None;
 
 	XSelectInput (dpy, XRootWindow (dpy, 0), StructureNotifyMask | SubstructureNotifyMask | FocusChangeMask);
-	xw = XWindow::GetWindow(dpy, root);
+	xw = XDisplay::GetWindow(dpy, root);
 	xw->UpdateHierarchy();
 
 	for (XWindow * child = xw->children(); child; child = child->sibling())
@@ -829,19 +830,19 @@ int main(int argc, char **argv)
 				printf("ConfigureNotify %08x\n", (int)event.xconfigure.window);
 				{
 					Window wabove;
-					XWindow * w = XWindow::GetWindow(dpy, event.xconfigure.window);
+					XWindow * w = XDisplay::GetWindow(dpy, event.xconfigure.window);
 					xw->UpdateHierarchy();
 
 					XWindow * above = NULL;
 					if (XGetTransientForHint(dpy, w->w(), &wabove) && wabove != None)
 					{
 						printf("   transient for %08x\n", (int)wabove);
-						above = XWindow::GetWindow(dpy, wabove);
+						above = XDisplay::GetWindow(dpy, wabove);
 					}
 					if ((!above || !above->mapped()) && event.xconfigure.above != None)
 					{
 						printf("   above %08x\n", (int)event.xconfigure.above);
-						above = XWindow::GetWindow(dpy, event.xconfigure.above);
+						above = XDisplay::GetWindow(dpy, event.xconfigure.above);
 					}
 					if (!above) printf("no above\n");
 					else if (!above->mapped()) printf("above not mapped\n");
@@ -861,7 +862,7 @@ int main(int argc, char **argv)
 			case Expose:
 				printf("Expose %08x\n", (int)event.xexpose.window);
 				{
-					XWindow * w = XWindow::GetWindow(dpy, event.xexpose.window);
+					XWindow * w = XDisplay::GetWindow(dpy, event.xexpose.window);
 					if (w)
 					{
 						XDamageCreate (dpy, event.xcreatewindow.window, XDamageReportRawRectangles);
@@ -872,7 +873,7 @@ int main(int argc, char **argv)
 			case MapNotify:
 				printf("Map %08x\n", (int)event.xmap.window);
 				{
-					XWindow * w = XWindow::GetWindow(dpy, event.xmap.window);
+					XWindow * w = XDisplay::GetWindow(dpy, event.xmap.window);
 					xw->UpdateHierarchy();
 					if (w)
 					{
@@ -884,7 +885,7 @@ int main(int argc, char **argv)
 			case UnmapNotify:
 				printf("Unmap %08x\n", (int)event.xunmap.window);
 				{
-					XWindow * w = XWindow::GetWindow(dpy, event.xunmap.window);
+					XWindow * w = XDisplay::GetWindow(dpy, event.xunmap.window);
 					if (w)
 					{
 						w->Unmap();
@@ -909,7 +910,7 @@ int main(int argc, char **argv)
 				if (event.type == damageEvent + XDamageNotify)
 				{
 					XDamageNotifyEvent *de = (XDamageNotifyEvent *) &event;
-					XWindow * w = XWindow::GetWindow(dpy, de->drawable);
+					XWindow * w = XDisplay::GetWindow(dpy, de->drawable);
 					if (w)
 					{
 						/*printf ("damage %08x %08x %d %d %d %d, %d %d %d %d\n", de->drawable, w->w(),
@@ -935,14 +936,14 @@ int main(int argc, char **argv)
 				keyPressed(event.xkey.keycode, 0, 0);
 				if (g_kb_focus != None)
 				{
-					XWindow * w = XWindow::GetWindow(dpy, g_kb_focus);
+					XWindow * w = XDisplay::GetWindow(dpy, g_kb_focus);
 					w->SendKeyEvent(root, event.xkey.keycode, event.xkey.state, true);
 				}
 				break;
 			case KeyRelease:
 				if (g_kb_focus != None)
 				{
-					XWindow * w = XWindow::GetWindow(dpy, g_kb_focus);
+					XWindow * w = XDisplay::GetWindow(dpy, g_kb_focus);
 					w->SendKeyEvent(root, event.xkey.keycode, event.xkey.state, false);
 				}
 				break;
@@ -952,12 +953,12 @@ int main(int argc, char **argv)
 					Vector3 ray(event.xbutton.x * 2.f / g_width - 1.f, -(event.xbutton.y * 2.f - g_height) / g_width, -1.f);
 					//printf ("ray %f %f %f\n", ray._x, ray._y, ray._z);
 					ray.normalize();
-					XWindow::Hit hit(g_pos * g_scale, ray);
-					if (!XWindow::HitTest(hit, PointerMotionMask))
+					XDisplay::Hit hit(g_pos * g_scale, ray);
+					if (!XDisplay::HitTest(hit, PointerMotionMask))
 					{
 						if (g_mouse_focus != None)
 						{
-							XWindow * w = XWindow::GetWindow(dpy, g_kb_focus);
+							XWindow * w = XDisplay::GetWindow(dpy, g_kb_focus);
 							w->SendCrossingEvent(root, hit._x, -hit._y, g_button_state, false);
 							g_mouse_focus = None;
 						}
@@ -968,7 +969,7 @@ int main(int argc, char **argv)
 					{
 						if (g_mouse_focus != None)
 						{
-							XWindow * w = XWindow::GetWindow(dpy, g_kb_focus);
+							XWindow * w = XDisplay::GetWindow(dpy, g_kb_focus);
 							w->SendCrossingEvent(root, hit._x, -hit._y, g_button_state, false);
 						}
 						g_mouse_focus = hit._w->w();
@@ -983,8 +984,8 @@ int main(int argc, char **argv)
 					Vector3 ray(event.xbutton.x * 2.f / g_width - 1.f, -(event.xbutton.y * 2.f - g_height) / g_width, -1.f);
 					printf ("ray %f %f %f\n", ray._x, ray._y, ray._z);
 					ray.normalize();
-					XWindow::Hit hit(g_pos * g_scale, ray);
-					if (!XWindow::HitTest(hit, ButtonPressMask))
+					XDisplay::Hit hit(g_pos * g_scale, ray);
+					if (!XDisplay::HitTest(hit, ButtonPressMask))
 					{
 						printf ("miss\n");
 						break;
@@ -1004,8 +1005,8 @@ int main(int argc, char **argv)
 					Vector3 ray(event.xbutton.x * 2.f / g_width - 1.f, -(event.xbutton.y * 2.f - g_height) / g_width, -1.f);
 					printf ("ray %f %f %f\n", ray._x, ray._y, ray._z);
 					ray.normalize();
-					XWindow::Hit hit(g_pos * g_scale, ray);
-					if (!XWindow::HitTest(hit, ButtonReleaseMask))
+					XDisplay::Hit hit(g_pos * g_scale, ray);
+					if (!XDisplay::HitTest(hit, ButtonReleaseMask))
 					{
 						printf ("miss\n");
 						break;

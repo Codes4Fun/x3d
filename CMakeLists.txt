@@ -5,7 +5,7 @@ set (x3d_VERSION_MAJOR 0)
 set (x3d_VERSION_MINOR 1)
 
 option (USE_HYDRA "Create the Hydra Modules" OFF)
-set (SIXENSE_PATH "${PROJECT_SOURCE_DIR}/sixenseSDK_linux_OSX" CACHE PATH "Sixense SDK for Hydra")
+set (SIXENSE_PATH "${PROJECT_SOURCE_DIR}/../sixenseSDK_linux_OSX" CACHE PATH "Sixense SDK for Hydra")
 
 # set the default install to our binary directory
 #set (CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/release" CACHE PATH "install prefix" FORCE)
@@ -22,12 +22,10 @@ include_directories("${PROJECT_BINARY_DIR}")
 
 set (EXTRA_LIBS X11 GL)
 
-#add_library (vertex Matrix.cpp Vector.cpp)
 include_directories ("${PROJECT_SOURCE_DIR}/vertex")
 add_subdirectory (vertex)
 set (EXTRA_LIBS ${EXTRA_LIBS} vertex)
 
-#add_library (x3dserver XWindow.cpp)
 include_directories ("${PROJECT_SOURCE_DIR}/xman")
 add_subdirectory (xman)
 set (EXTRA_LIBS ${EXTRA_LIBS} xman)
@@ -59,6 +57,7 @@ target_link_libraries (x3d ${EXTRA_LIBS})
 
 install (TARGETS x3d DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/run.sh"
+               "${PROJECT_SOURCE_DIR}/server.sh"
                "${PROJECT_SOURCE_DIR}/debug.sh"
                "${PROJECT_SOURCE_DIR}/cdebug.sh" DESTINATION bin)
 

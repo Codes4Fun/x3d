@@ -4,3 +4,31 @@ http://sixense.com/linuxsdkdownload
 
 
 
+~== BUILD ==~
+
+1) create a build directory and go into it:
+
+mkdir x3d-build
+cd x3d-build
+
+2) In the build directory use cmake:
+
+$ cmake ../x3d-src
+
+That will use the default settings to interactively change settings (like the sixense SDK directory):
+
+$ cmake -i ../x3d-src
+
+or for a fancier (curses) interface:
+
+$ ccmake ../x3d-src
+
+...remember to press 'c' to configure to be able to see all the settings.
+
+3) Run make will build the project, by default the install directory is a release directory in your build directory, so running make install is safe.
+
+make install
+
+If you want to see the gcc commands when building then enter this before running make:
+export VERBOSE=1
+
