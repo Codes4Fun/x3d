@@ -230,6 +230,81 @@ void DrawCursorShadow(float closeness)
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 15);
 }
 
+void SetMouseFocus(XWindow * focus, int x, int y)
+{
+	if (!focus)
+	{
+		if (g_mouse_focus == None)
+			return;
+
+		XWindow * w = XDisplay::GetWindow(g_dpy, g_mouse_focus);
+		w->SendCrossingEvent(g_root, x, y, g_button_state, NotifyAncestor, None, false);
+		XWindow * child = w;
+		for (w = w->parent(); w != xw; w = w->parent())
+		{
+			w->SendCrossingEvent(g_root, x, y, g_button_state, NotifyVirtual, child->w(), false);
+			child = w;
+		}
+		g_mouse_focus = None;
+		return;
+	}
+
+	if (focus->w() == g_mouse_focus)
+		return;
+
+	if (g_mouse_focus != None)
+	{
+		XWindow * w = XDisplay::GetWindow(g_dpy, g_mouse_focus);
+		XDisplay::Cross cross;
+		XDisplay::GetCross(w, focus, cross);
+		if (cross._base == 0)
+		{
+			cross._w[0]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyInferior, None, false);
+			for (int i = cross._count - 1; i > 1; i--)
+			{
+				cross._w[i]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyVirtual, cross._w[i - 1]->w(), false);
+			}
+			cross._w[cross._base + 1]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyAncestor, None, true);
+		}
+		else if (cross._base == cross._count - 1)
+		{
+			cross._w[0]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyAncestor, None, false);
+			for (int i = 1; i < cross._base; i++)
+			{
+				cross._w[i]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyVirtual, cross._w[i - 1]->w(), true);
+			}
+			cross._w[cross._base]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyInferior, None, true);
+		}
+		else
+		{
+			cross._w[0]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyNonlinear, None, false);
+			for (int i = 1; i < cross._base; i++)
+			{
+				cross._w[i]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyNonlinearVirtual, cross._w[i - 1]->w(), false);
+			}
+			for (int i = cross._count - 1; i > cross._base + 1; i--)
+			{
+				cross._w[i]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyNonlinearVirtual, cross._w[i - 1]->w(), true);
+			}
+			cross._w[cross._base + 1]->SendCrossingEvent(g_root, x, y, g_button_state, NotifyNonlinear, None, true);
+		}
+		g_mouse_focus = focus->w();
+	}
+	else
+	{
+		g_mouse_focus = focus->w();
+		XWindow * parent = focus->parent();//nearest._frame;
+		while (parent != focus)
+		{
+			XWindow * child = focus;
+			for (; child->parent() != parent; child = child->parent());
+			parent->SendCrossingEvent(g_root, x, y, g_button_state, NotifyVirtual, child->w(), true);
+			parent = child;
+		}
+		focus->SendCrossingEvent(g_root, x, y, g_button_state, NotifyAncestor, None, true);
+	}
+}
+
 void DrawGLScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		// Clear The Screen And The Depth Buffer
@@ -393,75 +468,12 @@ void DrawGLScene()
 #endif
 			if (!found)
 			{
-				if (g_mouse_focus != None)
-				{
-					XWindow * w = XDisplay::GetWindow(g_dpy, g_mouse_focus);
-					w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyAncestor, None, false);
-					XWindow * child = w;
-					for (w = w->parent(); w != xw; w = w->parent())
-					{
-						w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyVirtual, child->w(), false);
-						child = w;
-					}
-					g_mouse_focus = None;
-				}
+				SetMouseFocus(NULL, nearest._x, nearest._y);
 			}
 			else
 			{
-				if (g_mouse_focus != nearest._w->w())
-				{
-					if (g_mouse_focus != None)
-					{
-						XWindow * w = XDisplay::GetWindow(g_dpy, g_mouse_focus);
-						XDisplay::Cross cross;
-						XDisplay::GetCross(w, nearest._w, cross);
-						if (cross._base == 0)
-						{
-							cross._w[0]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyInferior, None, false);
-							for (int i = cross._count - 1; i > 1; i--)
-							{
-								cross._w[i]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyVirtual, cross._w[i - 1]->w(), false);
-							}
-							cross._w[cross._base + 1]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyAncestor, None, true);
-						}
-						else if (cross._base == cross._count - 1)
-						{
-							cross._w[0]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyAncestor, None, false);
-							for (int i = 1; i < cross._base; i++)
-							{
-								cross._w[i]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyVirtual, cross._w[i - 1]->w(), true);
-							}
-							cross._w[cross._base]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyInferior, None, true);
-						}
-						else
-						{
-							cross._w[0]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyNonlinear, None, false);
-							for (int i = 1; i < cross._base; i++)
-							{
-								cross._w[i]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyNonlinearVirtual, cross._w[i - 1]->w(), false);
-							}
-							for (int i = cross._count - 1; i > cross._base + 1; i--)
-							{
-								cross._w[i]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyNonlinearVirtual, cross._w[i - 1]->w(), true);
-							}
-							cross._w[cross._base + 1]->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyNonlinear, None, true);
-						}
-						g_mouse_focus = nearest._w->w();
-					}
-					else
-					{
-						g_mouse_focus = nearest._w->w();
-						XWindow * parent = nearest._frame;
-						while (parent != nearest._w)
-						{
-							XWindow * child = nearest._w;
-							for (; child->parent() != parent; child = child->parent());
-							parent->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyVirtual, child->w(), true);
-							parent = child;
-						}
-						nearest._w->SendCrossingEvent(g_root, nearest._x, nearest._y, g_button_state, NotifyAncestor, None, true);
-					}
-				}
+				SetMouseFocus(nearest._w, nearest._x, nearest._y);
+
 				if (controls[1-controli][18] > 0.75f && controls[controli][18] < 0.25f )
 				{
 					if (nearest._w->w() != g_kb_focus)
@@ -926,6 +938,9 @@ int main(int argc, char **argv)
 			XNextEvent(g_gldpy, &event);
 			switch (event.type)
 			{
+			default:
+				//printf("unhandled event %d\n", event.type);
+				break;
 			case Expose:
 				break;
 			case ConfigureNotify:
@@ -947,7 +962,7 @@ int main(int argc, char **argv)
 					w->SendKeyEvent(root, event.xkey.keycode, event.xkey.state, false);
 				}
 				break;
-#if 0
+#ifndef USE_HYDRA
 			case MotionNotify:
 				{
 					Vector3 ray(event.xbutton.x * 2.f / g_width - 1.f, -(event.xbutton.y * 2.f - g_height) / g_width, -1.f);
@@ -956,25 +971,11 @@ int main(int argc, char **argv)
 					XDisplay::Hit hit(g_pos * g_scale, ray);
 					if (!XDisplay::HitTest(hit, PointerMotionMask))
 					{
-						if (g_mouse_focus != None)
-						{
-							XWindow * w = XDisplay::GetWindow(dpy, g_kb_focus);
-							w->SendCrossingEvent(root, hit._x, -hit._y, g_button_state, false);
-							g_mouse_focus = None;
-						}
+						SetMouseFocus(NULL, (int)hit._x, (int)-hit._y);
 						//printf ("miss\n");
 						break;
 					}
-					if (g_mouse_focus != hit._w->w())
-					{
-						if (g_mouse_focus != None)
-						{
-							XWindow * w = XDisplay::GetWindow(dpy, g_kb_focus);
-							w->SendCrossingEvent(root, hit._x, -hit._y, g_button_state, false);
-						}
-						g_mouse_focus = hit._w->w();
-						hit._w->SendCrossingEvent(root, hit._x, -hit._y, g_button_state, true);
-					}
+					SetMouseFocus(hit._w, (int)hit._x, (int)-hit._y);
 					//printf ("hit %08x %f %f\n", focus, hit._x, -hit._y);
 					hit._w->SendMotionEvent(root, hit._x, -hit._y, g_button_state);
 				}
