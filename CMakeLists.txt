@@ -20,7 +20,7 @@ configure_file (
   )
 include_directories("${PROJECT_BINARY_DIR}")
 
-set (EXTRA_LIBS X11 GL)
+set (EXTRA_LIBS X11 GL Xdamage)
 
 include_directories ("${PROJECT_SOURCE_DIR}/vertex")
 add_subdirectory (vertex)
@@ -59,7 +59,9 @@ install (TARGETS x3d DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/run.sh"
                "${PROJECT_SOURCE_DIR}/server.sh"
                "${PROJECT_SOURCE_DIR}/debug.sh"
-               "${PROJECT_SOURCE_DIR}/cdebug.sh" DESTINATION bin)
+               "${PROJECT_SOURCE_DIR}/cdebug.sh"
+               DESTINATION bin
+               PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 add_test (x3dRuns x3d -display :9)
 
