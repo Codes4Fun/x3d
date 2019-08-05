@@ -7,6 +7,9 @@ set (x3d_VERSION_MINOR 1)
 option (USE_HYDRA "Create the Hydra Modules" OFF)
 set (SIXENSE_PATH "${PROJECT_SOURCE_DIR}/../sixenseSDK_linux_OSX" CACHE PATH "Sixense SDK for Hydra")
 
+option (USE_OPENVR "Create the OpenVR Modules" OFF)
+set (OPENVR_PATH "${PROJECT_SOURCE_DIR}/../openvr" CACHE PATH "OpenVR")
+
 # set the default install to our binary directory
 #set (CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/release" CACHE PATH "install prefix" FORCE)
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -20,7 +23,7 @@ configure_file (
   )
 include_directories("${PROJECT_BINARY_DIR}")
 
-set (EXTRA_LIBS X11 GL Xdamage)
+set (EXTRA_LIBS X11 GLEW GL Xdamage)
 
 include_directories ("${PROJECT_SOURCE_DIR}/vertex")
 add_subdirectory (vertex)
@@ -51,6 +54,18 @@ if (USE_HYDRA)
   set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--unresolved-symbols=ignore-in-shared-libs")
 endif (USE_HYDRA)
 
+if (USE_OPENVR)
+  if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+    link_directories ("${OPENVR_PATH}/lib/linux64")
+    install (FILES "${OPENVR_PATH}/lib/linux64/libopenvr_api.so" DESTINATION bin)
+  else (CMAKE_SIZEOF_VOID_P MATCHES "8")
+    link_directories ("${OPENVR_PATH}/lib/linux32")
+    install (FILES "${OPENVR_PATH}/lib/linux32/libopenvr_api.so" DESTINATION bin)
+  endif (CMAKE_SIZEOF_VOID_P MATCHES "8")
+  set (EXTRA_LIBS ${EXTRA_LIBS} openvr_api)
+  include_directories ("${OPENVR_PATH}/headers")
+endif (USE_OPENVR)
+
 add_executable (x3d phasetest.cpp)
 
 target_link_libraries (x3d ${EXTRA_LIBS})
@@ -62,6 +77,10 @@ install (FILES "${PROJECT_SOURCE_DIR}/run.sh"
                "${PROJECT_SOURCE_DIR}/cdebug.sh"
                DESTINATION bin
                PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+install (FILES "${PROJECT_SOURCE_DIR}/action_manifest.json"
+               "${PROJECT_SOURCE_DIR}/bindings_generic.json"
+               "${PROJECT_SOURCE_DIR}/bindings_knuckles.json"
+               DESTINATION bin)
 
 add_test (x3dRuns x3d -display :9)
 
