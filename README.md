@@ -2,9 +2,11 @@
 
 This was a project started mid june 2012 in anticipation of the Oculus Rift to explore VR desktops.
 
+[![](x3d.jpg)](https://www.youtube.com/watch?v=XP0LLfiD43Y)
+
 The source code was never released for this prototype but with the [announcement](https://www.collabora.com/news-and-blog/news-and-events/moving-the-linux-desktop-to-another-reality.html) of [xrdesktop](https://gitlab.freedesktop.org/xrdesktop/xrdesktop), a new project to develop a VR/AR linux desktop, I'm releasing this code as-is for general public use.
 
-This is not a revival of this project but just a release of a piece of history with a bit of reconstruction for those who would explore it.
+This is not a revival of this project but just a release of a piece of history with a bit of reconstruction (add openvr support) for those who would explore it.
 
 # History
 
